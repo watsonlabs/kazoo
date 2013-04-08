@@ -346,10 +346,10 @@ handle_cast({'add_event_listener', {M, F, A}}, #state{call=Call}=State) ->
         P when is_pid(P) ->
             lager:info("started event listener ~p from ~s:~s", [P, M, F]),
             {'noreply', State#state{call=whapps_call:kvs_update('cf_event_pids'
-                                                              ,fun(Ps) -> [P | Ps] end
-                                                              ,[P]
-                                                              ,Call
-                                                             )}}
+                                                                ,fun(Ps) -> [P | Ps] end
+                                                                ,[P]
+                                                                ,Call
+                                                               )}}
     catch
         _:_R ->
             lager:info("failed to spawn ~s:~s: ~p", [M, F, _R]),
