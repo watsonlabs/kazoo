@@ -1,7 +1,13 @@
 %%%-------------------------------------------------------------------
-%%% @copyright (C) 2011-2012, VoIP INC
+%%% @copyright (C) 2011-2013 2600Hz
 %%% @doc
-%%%
+%%% Data:
+%%%   id: document ID of the device to ring
+%%%   // optional parameters
+%%%   can_call_self: boolean, will the device be rung if called from itself
+%%%   static_invite: set the INVITE to a static value (instead of username, dialed #, etc)
+%%%   timeout: integer, in seconds, how long to ring device
+%%%   delay: integer, in seconds, how long to wait before sending the INVITE
 %%% @end
 %%% @contributors
 %%%   Karl Anderson
@@ -20,15 +26,15 @@
 %% stop when successfull.
 %% @end
 %%--------------------------------------------------------------------
--spec handle(wh_json:json_object(), whapps_call:call()) -> 'ok'.
+-spec handle(wh_json:object(), whapps_call:call()) -> 'ok'.
 handle(Data, Call) ->
     case bridge_to_endpoints(Data, Call) of
-        {ok, _} ->
+        {'ok', _} ->
             lager:info("completed successful bridge to the device"),
             cf_exe:stop(Call);
-        {fail, _}=F ->
+        {'fail', _}=F ->
             cf_util:handle_bridge_failure(F, Call);
-        {error, _R} ->
+        {'error', _R} ->
             lager:info("error bridging to device: ~p", [_R]),
             cf_exe:continue(Call)
     end.
@@ -39,15 +45,14 @@ handle(Data, Call) ->
 %% Attempts to bridge to the endpoints created to reach this device
 %% @end
 %%--------------------------------------------------------------------
--spec bridge_to_endpoints(wh_json:json_object(), whapps_call:call()) ->
+-spec bridge_to_endpoints(wh_json:object(), whapps_call:call()) ->
                                  cf_api_bridge_return().
 bridge_to_endpoints(Data, Call) ->
     EndpointId = wh_json:get_value(<<"id">>, Data),
     Params = wh_json:set_value(<<"source">>, ?MODULE, Data),
     case cf_endpoint:build(EndpointId, Params, Call) of
-        {error, _}=E ->
-            E;
-        {ok, Endpoints} ->
+        {'error', _}=E -> E;
+        {'ok', Endpoints} ->
             Timeout = wh_json:get_binary_value(<<"timeout">>, Data, ?DEFAULT_TIMEOUT),
             IgnoreEarlyMedia = cf_util:ignore_early_media(Endpoints),
             whapps_call_command:b_bridge(Endpoints, Timeout, <<"simultaneous">>, IgnoreEarlyMedia, Call)

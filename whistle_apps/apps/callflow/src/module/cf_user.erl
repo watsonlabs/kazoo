@@ -1,6 +1,13 @@
 %%%-------------------------------------------------------------------
-%%% @copyright (C) 2011-2012, VoIP INC
+%%% @copyright (C) 2011-2013 2600Hz
 %%% @doc
+%%% Data:
+%%%   id: document ID of the device to ring
+%%%   // optional parameters
+%%%   timeout: integer, in seconds, how long to ring user's device(s)
+%%%   strategy: single | simultaneous, how to ring the endpoints
+%%%   delay: integer, in seconds, how long to pause before ringing the endpoint
+%%%   can_call_self: boolean, will the device be rung if called from itself
 %%%
 %%% @end
 %%% @contributors

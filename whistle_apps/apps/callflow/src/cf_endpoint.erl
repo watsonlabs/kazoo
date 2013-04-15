@@ -1,5 +1,5 @@
 %%%-------------------------------------------------------------------
-%%% @copyright (C) 2011-2012, VoIP INC
+%%% @copyright (C) 2011-2013 2600Hz
 %%% @doc
 %%%
 %%% @end
@@ -392,7 +392,7 @@ should_create_endpoint([Routine|Routines], Endpoint, Properties, Call) when is_f
 maybe_owner_called_self(Endpoint, Properties, Call) ->
     CanCallSelf = wh_json:is_true(<<"can_call_self">>, Properties),
     EndpointOwnerId = wh_json:get_value(<<"owner_id">>, Endpoint),
-    OwnerId = whapps_call:kvs_fetch(owner_id, Call),
+    OwnerId = whapps_call:kvs_fetch('owner_id', Call),
     case CanCallSelf
         orelse (not is_binary(OwnerId))
         orelse (not is_binary(EndpointOwnerId))
@@ -405,8 +405,8 @@ maybe_owner_called_self(Endpoint, Properties, Call) ->
     end.
 
 -spec maybe_endpoint_called_self(wh_json:object(), wh_json:object(),  whapps_call:call()) ->
-                                              'ok' |
-                                              {'error', 'endpoint_called_self'}.
+                                        'ok' |
+                                        {'error', 'endpoint_called_self'}.
 maybe_endpoint_called_self(Endpoint, Properties, Call) ->
     CanCallSelf = wh_json:is_true(<<"can_call_self">>, Properties),
     AuthorizingId = whapps_call:authorizing_id(Call),
@@ -472,7 +472,7 @@ create_endpoints(Endpoint, Properties, Call) ->
 -type ep_routine() :: fun((wh_json:object(), wh_json:object(), whapps_call:call()) ->
                                  {'error', _} | wh_json:object()).
 -spec try_create_endpoint(ep_routine(), wh_json:objects(), wh_json:object(), wh_json:object(), whapps_call:call()) ->
-                                       wh_json:objects().
+                                 wh_json:objects().
 try_create_endpoint(Routine, Endpoints, Endpoint, Properties, Call) when is_function(Routine, 3) ->
     try Routine(Endpoint, Properties, Call) of
         {'error', _} -> Endpoints;
