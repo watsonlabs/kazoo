@@ -123,7 +123,7 @@
                               {'tones', wh_json:objects()} |
                               {'tts', ne_binary()} | {'tts', ne_binary(), ne_binary()} | {'tts', ne_binary(), ne_binary(), ne_binary()}.
 -type audio_macro_prompts() :: [audio_macro_prompt(),...] | [].
--export_type([audio_macro_prompt/0]).
+-export_type([audio_macro_prompt/0, audio_macro_prompts/0]).
 
 %%--------------------------------------------------------------------
 %% @public
