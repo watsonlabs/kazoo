@@ -6,7 +6,7 @@
 %%%   action:
 %%%    "compose": Caller creates a voicemail
 %%%    "check": Caller checks voicemail box for messages
-%%%   max_message_length: integer, optionally restrict the size of the vmbox
+%%%   max_message_length: integer, in seconds, restrict the size of the message
 %%% @end
 %%% @contributors
 %%%   Karl Anderson
