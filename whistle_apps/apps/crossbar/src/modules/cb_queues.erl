@@ -89,13 +89,13 @@
 %%--------------------------------------------------------------------
 -spec init() -> 'ok'.
 init() ->
-    _ = crossbar_bindings:bind(<<"v1_resource.allowed_methods.queues">>, ?MODULE, allowed_methods),
-    _ = crossbar_bindings:bind(<<"v1_resource.resource_exists.queues">>, ?MODULE, resource_exists),
-    _ = crossbar_bindings:bind(<<"v1_resource.content_types_provided.queues">>, ?MODULE, content_types_provided),
-    _ = crossbar_bindings:bind(<<"v1_resource.validate.queues">>, ?MODULE, validate),
-    _ = crossbar_bindings:bind(<<"v1_resource.execute.put.queues">>, ?MODULE, put),
-    _ = crossbar_bindings:bind(<<"v1_resource.execute.post.queues">>, ?MODULE, post),
-    _ = crossbar_bindings:bind(<<"v1_resource.execute.delete.queues">>, ?MODULE, delete).
+    _ = crossbar_bindings:bind(<<"v1_resource.allowed_methods.queues">>, ?MODULE, 'allowed_methods'),
+    _ = crossbar_bindings:bind(<<"v1_resource.resource_exists.queues">>, ?MODULE, 'resource_exists'),
+    _ = crossbar_bindings:bind(<<"v1_resource.content_types_provided.queues">>, ?MODULE, 'content_types_provided'),
+    _ = crossbar_bindings:bind(<<"v1_resource.validate.queues">>, ?MODULE, 'validate'),
+    _ = crossbar_bindings:bind(<<"v1_resource.execute.put.queues">>, ?MODULE, 'put'),
+    _ = crossbar_bindings:bind(<<"v1_resource.execute.post.queues">>, ?MODULE, 'post'),
+    _ = crossbar_bindings:bind(<<"v1_resource.execute.delete.queues">>, ?MODULE, 'delete').
 
 %%--------------------------------------------------------------------
 %% @public
@@ -108,19 +108,13 @@ init() ->
 -spec allowed_methods(path_token()) -> http_methods().
 -spec allowed_methods(path_token(), path_token()) -> http_methods().
 
-allowed_methods() ->
-    ['GET', 'PUT'].
-allowed_methods(?STATS_PATH_TOKEN) ->
-    ['GET'];
-allowed_methods(?EAVESDROP_PATH_TOKEN) ->
-    ['PUT'];
-allowed_methods(_QID) ->
-    ['GET', 'POST', 'DELETE'].
+allowed_methods() -> ['GET', 'PUT'].
+allowed_methods(?STATS_PATH_TOKEN) -> ['GET'];
+allowed_methods(?EAVESDROP_PATH_TOKEN) -> ['PUT'];
+allowed_methods(_QID) -> ['GET', 'POST', 'DELETE'].
 
-allowed_methods(_QID, ?ROSTER_PATH_TOKEN) ->
-    ['GET', 'POST', 'DELETE'];
-allowed_methods(_QID, ?EAVESDROP_PATH_TOKEN) ->
-    ['PUT'].
+allowed_methods(_QID, ?ROSTER_PATH_TOKEN) -> ['GET', 'POST', 'DELETE'];
+allowed_methods(_QID, ?EAVESDROP_PATH_TOKEN) -> ['PUT'].
 
 %%--------------------------------------------------------------------
 %% @public
@@ -134,12 +128,12 @@ allowed_methods(_QID, ?EAVESDROP_PATH_TOKEN) ->
 -spec resource_exists() -> 'true'.
 -spec resource_exists(path_token()) -> 'true'.
 -spec resource_exists(path_token(), path_token()) -> 'true'.
-resource_exists() -> true.
+resource_exists() -> 'true'.
 
-resource_exists(_) -> true.
+resource_exists(_) -> 'true'.
 
-resource_exists(_, ?ROSTER_PATH_TOKEN) -> true;
-resource_exists(_, ?EAVESDROP_PATH_TOKEN) -> true.
+resource_exists(_, ?ROSTER_PATH_TOKEN) -> 'true';
+resource_exists(_, ?EAVESDROP_PATH_TOKEN) -> 'true'.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -154,12 +148,12 @@ content_types_provided(#cb_context{}=Context) -> Context.
 content_types_provided(#cb_context{}=Context, ?STATS_PATH_TOKEN) ->
     case cb_context:req_value(Context, <<"format">>, ?FORMAT_COMPRESSED) of
         ?FORMAT_VERBOSE ->
-            CTPs = [{to_json, [{<<"application">>, <<"json">>}]}
-                    ,{to_csv, [{<<"application">>, <<"octet-stream">>}]}
+            CTPs = [{'to_json', [{<<"application">>, <<"json">>}]}
+                    ,{'to_csv', [{<<"application">>, <<"octet-stream">>}]}
                    ],
             cb_context:add_content_types_provided(Context, CTPs);
         ?FORMAT_COMPRESSED ->
-            CTPs = [{to_json, [{<<"application">>, <<"json">>}]}],
+            CTPs = [{'to_json', [{<<"application">>, <<"json">>}]}],
             cb_context:add_content_types_provided(Context, CTPs)
     end.
 
@@ -207,8 +201,8 @@ validate_eavesdrop_on_call(#cb_context{req_data=Data}=Context) ->
           ,{fun is_valid_mode/2, [Context, Data]}
          ],
     case all_true(Fs) of
-        true -> Context#cb_context{resp_status=success};
-        {false, Context1} -> Context1
+        'true' -> Context#cb_context{resp_status='success'};
+        {'false', Context1} -> Context1
     end.
 
 validate_eavesdrop_on_queue(#cb_context{req_data=Data}=Context, QueueId) ->
@@ -217,34 +211,34 @@ validate_eavesdrop_on_queue(#cb_context{req_data=Data}=Context, QueueId) ->
           ,{fun is_valid_mode/2, [Context, Data]}
          ],
     case all_true(Fs) of
-        true ->
-            Context#cb_context{resp_status=success};
-        {false, Context1} -> Context1
+        'true' ->
+            Context#cb_context{resp_status='success'};
+        {'false', Context1} -> Context1
     end.
 
 -spec all_true([{fun(), list()},...]) ->
-                            'true' |
-                            {'false', cb_context:context()}.
+                      'true' |
+                      {'false', cb_context:context()}.
 all_true(Fs) ->
-    lists:foldl(fun({F, Args}, true) -> apply(F, Args);
+    lists:foldl(fun({F, Args}, 'true') -> apply(F, Args);
                    (_, Acc) -> Acc
-                end, true, Fs).
+                end, 'true', Fs).
 
 is_valid_mode(Context, Data) ->
     case wapi_resource:is_valid_mode(wh_json:get_value(<<"mode">>, Data, <<"listen">>)) of
-        true -> true;
-        false -> {false
-                  ,cb_context:add_validation_error(<<"mode">>, <<"enum">>
-                                                   ,<<"enum:Value not found in enumerated list of values">>
-                                                   ,Context
-                                                  )
-                 }
+        'true' -> 'true';
+        'false' -> {'false'
+                    ,cb_context:add_validation_error(<<"mode">>, <<"enum">>
+                                                     ,<<"enum:Value not found in enumerated list of values">>
+                                                     ,Context
+                                                    )
+                   }
     end.
 
 is_valid_call(Context, Data) ->
     case wh_json:get_binary_value(<<"call_id">>, Data) of
-        undefined ->
-            {false
+        'undefined' ->
+            {'false'
              ,cb_context:add_validation_error(<<"call_id">>, <<"required">>
                                               ,<<"required:Field is required but missing">>
                                               ,Context
@@ -252,24 +246,24 @@ is_valid_call(Context, Data) ->
             };
         CallId ->
             case whapps_call_command:b_call_status(CallId) of
-                {error, _E} ->
+                {'error', _E} ->
                     lager:debug("is not valid call: ~p", [_E]),
-                    {false
+                    {'false'
                      ,cb_context:add_validation_error(<<"call_id">>, <<"not_found">>
                                                       ,<<"not_found:Call was not found">>
                                                       ,Context
                                                      )
                     };
-                {ok, _} -> true
+                {'ok', _} -> 'true'
             end
     end.
 
 is_valid_queue(Context, ?NE_BINARY = QueueId) ->
     AcctDb = cb_context:account_db(Context),
     case couch_mgr:open_cache_doc(AcctDb, QueueId) of
-        {ok, QueueJObj} -> is_valid_queue(Context, QueueJObj);
-        {error, _} ->
-            {false
+        {'ok', QueueJObj} -> is_valid_queue(Context, QueueJObj);
+        {'error', _} ->
+            {'false'
              ,cb_context:add_validation_error(<<"queue_id">>, <<"not_found">>
                                               ,<<"not_found:Queue was not found">>
                                               ,Context
@@ -278,11 +272,11 @@ is_valid_queue(Context, ?NE_BINARY = QueueId) ->
     end;
 is_valid_queue(Context, QueueJObj) ->
     case wh_json:get_value(<<"pvt_type">>, QueueJObj) of
-        <<"queue">> -> true;
+        <<"queue">> -> 'true';
         _ ->
-            {false
+            {'false'
              ,cb_context:add_validation_error(<<"queue_id">>, <<"type">>
-                                                  ,<<"type:Id did not represent a queue">>
+                                              ,<<"type:Id did not represent a queue">>
                                               ,Context
                                              )
             }
@@ -293,9 +287,9 @@ is_valid_endpoint(Context, DataJObj) ->
     Id = wh_json:get_value(<<"id">>, DataJObj),
 
     case couch_mgr:open_cache_doc(AcctDb, Id) of
-        {ok, CallMeJObj} -> is_valid_endpoint_type(Context, CallMeJObj);
-        {error, _} ->
-            {false
+        {'ok', CallMeJObj} -> is_valid_endpoint_type(Context, CallMeJObj);
+        {'error', _} ->
+            {'false'
              ,cb_context:add_validation_error(<<"id">>, <<"not_found">>
                                               ,<<"not_found:Id was not found">>
                                               ,Context
@@ -304,10 +298,10 @@ is_valid_endpoint(Context, DataJObj) ->
     end.
 is_valid_endpoint_type(Context, CallMeJObj) ->
     case wh_json:get_value(<<"pvt_type">>, CallMeJObj) of
-        <<"device">> -> true;
+        <<"device">> -> 'true';
         %%<<"user">> -> true;
         _ ->
-            {false
+            {'false'
              ,cb_context:add_validation_error(<<"id">>, <<"type">>
                                               ,<<"type:Id did not represent a valid endpoint">>
                                               ,Context
@@ -358,13 +352,13 @@ eavesdrop_req(Context, Prop) ->
                                        ,2000
                                       )
     of
-        {ok, Resp} -> crossbar_util:response(filter_response_fields(Resp), Context);
-        {error, timeout} ->
-            cb_context:add_system_error(timeout
-                                        ,[{details, <<"eavesdrop failed to start">>}]
+        {'ok', Resp} -> crossbar_util:response(filter_response_fields(Resp), Context);
+        {'error', 'timeout'} ->
+            cb_context:add_system_error('timeout'
+                                        ,[{'details', <<"eavesdrop failed to start">>}]
                                         ,Context
                                        );
-        {error, E} -> crossbar_util:response(error, <<"error">>, 500, E, Context)
+        {'error', E} -> crossbar_util:response('error', <<"error">>, 500, E, Context)
     end.
 
 -define(REMOVE_FIELDS, [<<"Server-ID">>
@@ -420,7 +414,7 @@ delete(#cb_context{}=Context, Id, ?ROSTER_PATH_TOKEN) ->
 -spec read(ne_binary(), cb_context:context()) -> cb_context:context().
 read(Id, Context) ->
     case crossbar_doc:load(Id, Context) of
-        #cb_context{resp_status=success}=Context1 ->
+        #cb_context{resp_status='success'}=Context1 ->
             load_queue_agents(Id, Context1);
         Context1 -> Context1
     end.
@@ -439,7 +433,7 @@ check_queue_schema(QueueId, Context) ->
     OnSuccess = fun(C) -> on_successful_validation(QueueId, C) end,
     cb_context:validate_request_data(<<"queues">>, Context, OnSuccess).
 
-on_successful_validation(undefined, #cb_context{doc=Doc}=Context) ->
+on_successful_validation('undefined', #cb_context{doc=Doc}=Context) ->
     Props = [{<<"pvt_type">>, <<"queue">>}],
     Context#cb_context{doc=wh_json:set_values(Props, Doc)};
 on_successful_validation(QueueId, #cb_context{}=Context) -> 
@@ -453,13 +447,13 @@ on_successful_validation(QueueId, #cb_context{}=Context) ->
 %%--------------------------------------------------------------------
 load_queue_agents(Id, #cb_context{resp_data=Queue}=Context) ->
     case load_agent_roster(Id, Context) of
-        #cb_context{resp_status=success, resp_data=Agents, doc=_D} ->
+        #cb_context{resp_status='success', resp_data=Agents, doc=_D} ->
             Context#cb_context{resp_data=wh_json:set_value(<<"agents">>, Agents, Queue)};
         _ -> Context
     end.
 
 load_agent_roster(Id, Context) ->
-    crossbar_doc:load_view(?CB_AGENTS_LIST, [{key, Id}]
+    crossbar_doc:load_view(?CB_AGENTS_LIST, [{'key', Id}]
                            ,Context
                            ,fun normalize_agents_results/2
                           ).
@@ -485,10 +479,10 @@ add_queue_to_agents(Id, #cb_context{req_data=[_|_]=AgentIds}=Context) ->
     add_queue_to_agents(Id, Context, AddAgentIds).
 
 add_queue_to_agents(_Id, Context, []) ->
-    Context#cb_context{resp_status=success, doc=[]};
+    Context#cb_context{resp_status='success', doc=[]};
 add_queue_to_agents(Id, Context, AgentIds) ->
     case crossbar_doc:load(AgentIds, Context) of
-        #cb_context{resp_status=success
+        #cb_context{resp_status='success'
                     ,doc=Agents
                    }=Context1 ->
             lager:debug("fetched agents: ~p", [Agents]),
@@ -500,8 +494,8 @@ maybe_add_queue_to_agent(Id, A) ->
     Qs = case wh_json:get_value(<<"queues">>, A) of
              L when is_list(L) ->
                  case lists:member(Id, L) of
-                     true -> L;
-                     false -> [Id | L]
+                     'true' -> L;
+                     'false' -> [Id | L]
                  end;
              _ -> [Id]
          end,
@@ -511,7 +505,7 @@ maybe_add_queue_to_agent(Id, A) ->
 -spec maybe_rm_agents(ne_binary(), cb_context:context(), wh_json:json_strings()) -> cb_context:context().
 maybe_rm_agents(_Id, Context, []) ->
     lager:debug("no agents to remove from the queue ~s", [_Id]),
-    Context#cb_context{resp_status=success};
+    Context#cb_context{resp_status='success'};
 maybe_rm_agents(Id, Context, AgentIds) ->
     #cb_context{}=RMContext = rm_queue_from_agents(Id, Context#cb_context{req_data=AgentIds}),
     #cb_context{resp_status=_S1}=RMContext1 = crossbar_doc:save(RMContext),
@@ -523,7 +517,7 @@ rm_queue_from_agents(_Id, #cb_context{req_data=[]}=Context) ->
 rm_queue_from_agents(Id, #cb_context{req_data=[_|_]=AgentIds}=Context) ->
     lager:debug("remove agents: ~p", [AgentIds]),
     case crossbar_doc:load(AgentIds, Context) of
-        #cb_context{resp_status=success
+        #cb_context{resp_status='success'
                     ,doc=Agents
                    }=Context1 ->
             lager:debug("removed agents successfully"),
@@ -531,7 +525,7 @@ rm_queue_from_agents(Id, #cb_context{req_data=[_|_]=AgentIds}=Context) ->
         Context1 -> Context1
     end;
 rm_queue_from_agents(_, #cb_context{req_data=_Req}=Context) ->
-    Context#cb_context{resp_status=success, doc=undefined}.
+    Context#cb_context{resp_status='success', doc='undefined'}.
 
 maybe_rm_queue_from_agent(Id, A) ->
     Qs = wh_json:get_value(<<"queues">>, A, []),
@@ -557,10 +551,10 @@ fetch_all_queue_stats(Context) ->
            end,
 
     AcctId = cb_context:account_id(Context),
-    Opts = [{startkey, [To]}
-            ,{endkey, [From]}
-            ,include_docs
-            ,descending
+    Opts = [{'startkey', [To]}
+            ,{'endkey', [From]}
+            ,'include_docs'
+            ,'descending'
            ],
 
     case cb_context:req_value(Context, <<"format">>, ?FORMAT_COMPRESSED) of
@@ -609,15 +603,15 @@ compress_stats(Context, From, To) ->
             end
     end.
 
--spec compress_stats('undefined' | wh_json:objects(), {wh_json:object(), wh_json:object(), wh_json:object()}) ->
-                                  wh_json:object().
-compress_stats(undefined, {Compressed, _, _}) -> Compressed;
+-spec compress_stats(api_objects(), {wh_json:object(), wh_json:object(), wh_json:object()}) ->
+                            wh_json:object().
+compress_stats('undefined', {Compressed, _, _}) -> Compressed;
 compress_stats([], {Compressed, Global, PerQueue}) -> accumulate_stats(Compressed, Global, PerQueue);
 compress_stats([Stat|Stats], {_Compressed, _Global, _PerQueue}=Res) ->
     compress_stats(Stats, add_stat(Stat, Res)).
 
 -spec accumulate_stats(wh_json:object(), wh_json:object(), wh_json:object()) ->
-                                    wh_json:object().
+                              wh_json:object().
 accumulate_stats(Compressed, Global, PerQueue) ->
     AccCompressed = wh_json:map(fun accumulate_queue_stats/2, Compressed),
     AccGlobal = wh_json:foldl(fun fold_call_totals/3, wh_json:new(), Global),
@@ -633,7 +627,7 @@ fold_call_totals(_CallId, Stats, Acc) ->
     AccAbandonedCalls = wh_json:get_value(<<"abandoned_calls">>, Acc, 0),
     AccAgentsMissed = wh_json:get_value(<<"agents_missed">>, Acc, 0),
 
-    Abandoned = case wh_json:get_value(?STAT_TIMESTAMP_ABANDONED, Stats) of undefined -> 0; _ -> 1 end,
+    Abandoned = case wh_json:get_value(?STAT_TIMESTAMP_ABANDONED, Stats) of 'undefined' -> 0; _ -> 1 end,
 
     Set = [{<<"total_calls">>, AccTotalCalls + 1}
            ,{<<"agents_missed">>, AccAgentsMissed + wh_json:get_integer_value(?STAT_AGENTS_MISSED, Stats, 0)}
@@ -641,14 +635,15 @@ fold_call_totals(_CallId, Stats, Acc) ->
           ],
 
     Set1 = case wait_time(Stats) of
-               undefined -> Set;
+               'undefined' -> Set;
                WaitTime ->
                    case call_time(Stats) of
-                       undefined -> Set;
-                       TalkTime -> [{<<"wait_time">>, AccWaitTime + WaitTime}
-                                    ,{<<"call_time">>, AccTalkTime + TalkTime}
-                                    | Set
-                                   ]
+                       'undefined' -> Set;
+                       TalkTime ->
+                           [{<<"wait_time">>, AccWaitTime + WaitTime}
+                            ,{<<"call_time">>, AccTalkTime + TalkTime}
+                            | Set
+                           ]
                    end
            end,
     wh_json:set_values(Set1, Acc).
@@ -671,7 +666,7 @@ accumulate_call_stats(CallId, Stats) ->
     TalkTime = call_time(Stats),
     {CurrentStatus, _CurrentTstamp} = current_status(Stats),
 
-    AccStats = wh_json:filter(fun({_, V}) -> V =/= undefined end
+    AccStats = wh_json:filter(fun({_, V}) -> V =/= 'undefined' end
                               ,wh_json:set_values([{<<"wait_time">>, WaitTime}
                                                    ,{<<"call_time">>, TalkTime}
                                                    ,{<<"current_status">>, CurrentStatus}
@@ -698,37 +693,37 @@ fold_call_statuses(CallId, Stats, Acc) ->
 
 wait_time(Stats) ->
     case wh_json:get_integer_value(?STAT_TIMESTAMP_WAITING, Stats) of
-        undefined -> undefined;
+        'undefined' -> 'undefined';
         Entered -> wait_time(Stats, Entered)
     end.
 wait_time(Stats, Entered) ->
     case wh_json:get_integer_value(?STAT_TIMESTAMP_HANDLING, Stats) of
-        undefined -> wait_time_abandoned(Stats, Entered);
+        'undefined' -> wait_time_abandoned(Stats, Entered);
         Conn -> Conn - Entered
     end.
 wait_time_abandoned(Stats, Entered) ->
     case wh_json:get_integer_value(?STAT_TIMESTAMP_ABANDONED, Stats) of
-        undefined -> undefined;
+        'undefined' -> 'undefined';
         Abandoned -> Abandoned - Entered
     end.
 
 call_time(Stats) ->
     case wh_json:get_integer_value(?STAT_TIMESTAMP_HANDLING, Stats) of
-        undefined -> undefined;
+        'undefined' -> 'undefined';
         Conn -> call_time(Stats, Conn)
     end.
 call_time(Stats, Conn) ->
     case wh_json:get_value(?STAT_TIMESTAMP_PROCESSED, Stats) of
-        undefined -> undefined;
+        'undefined' -> 'undefined';
         Finished -> Finished - Conn
     end.
 
 current_status(Stats) ->
     current_status(Stats, ?STAT_TIMESTAMP_KEYS).
-current_status(_Stats, []) -> {undefined, undefined};
+current_status(_Stats, []) -> {'undefined', 'undefined'};
 current_status(Stats, [K|Ks]) ->
     case wh_json:get_value(K, Stats) of
-        undefined -> current_status(Stats, Ks);
+        'undefined' -> current_status(Stats, Ks);
         T -> {status(K), T}
     end.
 
@@ -829,9 +824,9 @@ get_caller_id_info(Stat, QID, CID) ->
           ,wh_json:get_value(<<"caller_id_number">>, Stat)
          }
     of
-        {undefined, undefined} -> [];
-        {CName, undefined} -> [{[QID, CID, <<"caller_id_name">>], CName}];
-        {undefined, CNum} ->  [{[QID, CID, <<"caller_id_number">>], CNum}];
+        {'undefined', 'undefined'} -> [];
+        {CName, 'undefined'} -> [{[QID, CID, <<"caller_id_name">>], CName}];
+        {'undefined', CNum} ->  [{[QID, CID, <<"caller_id_number">>], CNum}];
         {CName, CNum} ->
             [{[QID, CID, <<"caller_id_number">>], CNum}
              ,{[QID, CID, <<"caller_id_name">>], CName}
