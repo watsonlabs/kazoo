@@ -7,10 +7,10 @@ LIB_EBINS = $(shell find $(ROOT)/lib -maxdepth 2 -name ebin -print)
 WHAPPS_LIB_EBINS = $(shell find $(ROOT)/whistle_apps/lib -maxdepth 2 -name ebin -print)
 
 DIRS =  . \
-	$(ROOT)/lib/whistle-1.0.0 \
-	$(ROOT)/lib/whistle_amqp-1.0.0 \
-	$(ROOT)/whistle_apps/lib/whistle_couch-1.0.0 \
-	$(ROOT)/whistle_apps
+	$(ROOT)/lib/whistle-1.0.0
+	#$(ROOT)/lib/whistle_amqp-1.0.0 \
+	#$(ROOT)/whistle_apps/lib/whistle_couch-1.0.0 \
+	#$(ROOT)/whistle_apps
 
 ERLC_OPTS = +debug_info +warn_export_all \
 	$(foreach LIB_EBIN,$(LIB_EBINS),-pa $(LIB_EBIN)) \
@@ -55,6 +55,6 @@ eunit: compile-test
 	erl -noshell -pa test -eval "eunit:test([$(MODULES),$(CB_MODULES)], [verbose])" -s init stop
 
 dialyze:
-	@$(DIALYZER) $(foreach DIR,$(DIRS),$(DIR)/ebin) \
+	@$(DIALYZER) --verbose $(foreach DIR,$(DIRS),$(DIR)/ebin) \
 		--plt $(ROOT)/.platform_dialyzer.plt --no_native \
 		-Werror_handling -Wrace_conditions -Wunmatched_returns # -Wunderspecs
