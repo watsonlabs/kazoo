@@ -84,10 +84,10 @@ init([Call, JObj]) ->
     whapps_call:put_callid(Call),
     gen_listener:cast(self(), 'start_action'),
     {'ok', #state{
-       call = Call
-       ,action = get_action(JObj)
-       ,owner_id = wh_json:get_value(<<"Owner-ID">>, JObj)
-      }}.
+              call = Call
+              ,action = get_action(JObj)
+              ,owner_id = wh_json:get_value(<<"Owner-ID">>, JObj)
+             }}.
 
 %%--------------------------------------------------------------------
 %% @private
