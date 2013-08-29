@@ -19,6 +19,7 @@
          ,is_compactor_running/0
          ,cancel_current_job/0
          ,cancel_all_jobs/0
+         ,cancel_queued_jobs/0
          ,start_auto_compaction/0
          ,stop_auto_compaction/0
          ,compact_automatically/0
@@ -193,6 +194,13 @@ cancel_all_jobs() ->
         'false' -> {'error', 'compactor_down'}
     end.
 
+-spec cancel_queued_jobs() -> {'ok', 'jobs_cancelled'} | not_compacting().
+cancel_queued_jobs() ->
+    case is_compactor_running() of
+        'true' -> gen_fsm:sync_send_event(?SERVER, 'cancel_queued_jobs');
+        'false' -> {'error', 'compactor_down'}
+    end.
+
 -spec start_auto_compaction() -> {'ok', 'already_started'} |
                                  {'queued', reference()} |
                                  not_compacting().
@@ -346,6 +354,23 @@ ready('cancel_all_jobs', _, #state{queued_jobs=Jobs}=State) ->
                                                              ,current_job_heuristic = ?HEUR_NONE
                                                             }};
 
+ready('cancel_queued_jobs', _, #state{queued_jobs=Jobs}=State) ->
+    _ = [ maybe_send_update(P, Ref, 'job_cancelled') || {_, P, Ref} <- queue:to_list(Jobs)],
+    {'reply', {'ok', 'jobs_cancelled'}, 'ready', State#state{nodes=[]
+                                                             ,dbs=[]
+                                                             ,wait_ref='undefined'
+                                                             ,shards_pid_ref='undefined'
+                                                             ,next_compaction_msg='undefined'
+                                                             ,current_node='undefined'
+                                                             ,current_db='undefined'
+                                                             ,conn='undefined'
+                                                             ,admin_conn='undefined'
+                                                             ,queued_jobs=queue:new()
+                                                             ,current_job_pid='undefined'
+                                                             ,current_job_ref='undefined'
+                                                             ,current_job_heuristic = ?HEUR_NONE
+                                                            }};
+
 ready(Msg, {NewP, _}, #state{queued_jobs=Jobs}=State) ->
     case queue:out(Jobs) of
         {'empty', _} ->
@@ -456,7 +481,7 @@ compact({'compact_db', N, D}=Msg, #state{conn='undefined'
     Cookie = wh_couch_connections:get_node_cookie(),
     try get_node_connections(N, Cookie) of
         {'error', _} ->
-            lager:debug("failed to connect to node ~s: timed out", [N]),
+            lager:debug("failed to connect to node ~p: timed out", [N]),
             maybe_send_update(Pid, Ref, 'job_finished'),
             gen_fsm:send_event(self(), 'next_job'),
             lager:debug("returning to 'ready'"),
@@ -476,7 +501,7 @@ compact({'compact_db', N, D}=Msg, #state{conn='undefined'
                                                  }}
     catch
         _:{'error', {'conn_failed', {'error', 'etimedout'}}} ->
-            lager:debug("failed to connect to node ~s: timed out", [N]),
+            lager:debug("failed to connect to node ~p: timed out", [N]),
             maybe_send_update(Pid, Ref, 'job_finished'),
             gen_fsm:send_event(self(), 'next_job'),
             lager:debug("returning to 'ready'"),
@@ -832,6 +857,11 @@ compact('cancel_all_jobs', _, #state{queued_jobs=Jobs
                   ,current_job_ref='undefined'
                   ,queued_jobs=queue:new()
                  }};
+
+compact('cancel_queued_jobs', _, #state{queued_jobs=Jobs}=State) ->
+    _ = [ maybe_send_update(P, Ref, 'job_cancelled') || {_, P, Ref} <- queue:to_list(Jobs)],
+    {'reply', {'ok', 'jobs_cancelled'}, 'compact', State#state{queued_jobs=queue:new()}};
+
 compact(Msg, {NewP, _}, #state{queued_jobs=Jobs}=State) ->
     lager:debug("recv msg, assuming new job: ~p", [Msg]),
     {Ref, Jobs1} = queue_job(Msg, NewP, Jobs),
@@ -904,6 +934,10 @@ wait('cancel_all_jobs', _, #state{queued_jobs=Jobs
                                                              ,current_job_ref='undefined'
                                                              ,queued_jobs=queue:new()
                                                             }};
+
+wait('cancel_queued_jobs', _, #state{queued_jobs=Jobs}=State) ->
+    _ = [ maybe_send_update(P, Ref, 'job_cancelled') || {_, P, Ref} <- queue:to_list(Jobs)],
+    {'reply', {'ok', 'jobs_cancelled'}, 'wait', State#state{queued_jobs=queue:new()}};
 
 wait(Msg, {NewP, _}, #state{queued_jobs=Jobs}=State) ->
     lager:debug("recv msg, assuming new job: ~p", [Msg]),
