@@ -10,13 +10,13 @@
 -define(MIN_DISK_SIZE, 131072).
 -define(DEFAULT_PORT, 5984).
 -define(DEFAULT_ADMIN_PORT, 5986).
--define(DEFAULT_TIMEOUT, whapps_config:get_integer(?CONFIG_CAT, <<"connect_timeout">>, 200)).
+-define(DEFAULT_CONNECT_TIMEOUT, whapps_config:get_integer(?CONFIG_CAT, <<"connect_timeout">>, 200)).
 -define(DEFAULT_PIPELINE, whapps_config:get_integer(?CONFIG_CAT, <<"max_pipeline_size">>, 10)).
 -define(DEFAULT_SESSIONS, whapps_config:get_integer(?CONFIG_CAT, <<"max_sessions">>, 512)).
 
 -define(IBROWSE_OPTS, [{'max_sessions', ?DEFAULT_SESSIONS}
                        ,{'max_pipeline_size', ?DEFAULT_PIPELINE}
-                       ,{'connect_timeout', ?DEFAULT_TIMEOUT}
+                       ,{'connect_timeout', ?DEFAULT_CONNECT_TIMEOUT}
                       ]).
 
 -define(WH_COUCH_CACHE, 'whistle_couch_cache').
