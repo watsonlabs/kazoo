@@ -17,6 +17,8 @@
 -export([create_call_fwd_endpoint/4
          ,create_sip_endpoint/3
         ]).
+-export([get_outbound_t38_settings/1, get_outbound_t38_settings/2]).
+-export([get_inbound_t38_settings/1, get_inbound_t38_settings/2]).
 
 -define(NON_DIRECT_MODULES, ['cf_ring_group', 'acdc_util']).
 
@@ -861,6 +863,107 @@ get_force_fax(JObj) ->
         'false' -> 'undefined';
         'true' -> <<"self">>
     end.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Get the t38 settings for an endpoint based on carrier and device
+%% @end
+%%--------------------------------------------------------------------
+-spec get_inbound_t38_settings(ne_binary(), api_binary()) -> wh_proplist().
+get_inbound_t38_settings(CarrierFlag, 'undefined') ->
+    get_inbound_t38_settings(CarrierFlag);
+get_inbound_t38_settings('true', <<"auto">>) ->
+    get_inbound_t38_settings(<<"true">>, <<"true">>);
+get_inbound_t38_settings('true', 'true') ->
+    [{<<"Enable-T38-Fax">>, 'undefined'}
+    ,{<<"Enable-T38-Fax-Request">>, 'undefined'}
+    ,{<<"Enable-T38-Passthrough">>, 'true'}
+    ,{<<"Enable-T38-Gateway">>, 'undefined'}
+    ];
+get_inbound_t38_settings('true', 'false') ->
+    [{<<"Enable-T38-Fax">>, 'true'}
+     ,{<<"Enable-T38-Fax-Request">>, 'true'}
+     ,{<<"Enable-T38-Passthrough">>, 'undefined'}
+     ,{<<"Enable-T38-Gateway">>, <<"self">>}
+    ];
+get_inbound_t38_settings('false', 'false') ->
+    [{<<"Enable-T38-Fax">>, 'undefined'}
+     ,{<<"Enable-T38-Fax-Request">>, 'undefined'}
+     ,{<<"Enable-T38-Passthrough">>, 'true'}
+     ,{<<"Enable-T38-Gateway">>, 'undefined'}
+    ];
+get_inbound_t38_settings('false','true') ->
+    [{<<"Enable-T38-Fax">>, 'true'}
+     ,{<<"Enable-T38-Fax-Request">>, 'true'}
+     ,{<<"Enable-T38-Passthrough">>, 'undefined'}
+     ,{<<"Enable-T38-Gateway">>, <<"peer">>}
+    ].
+
+-spec get_inbound_t38_settings(ne_binary()) -> wh_proplist().
+get_inbound_t38_settings('true') ->
+    [{<<"Enable-T38-Fax">>, 'true'}
+     ,{<<"Enable-T38-Fax-Request">>, 'true'}
+     ,{<<"Enable-T38-Passthrough">>, 'undefined'}
+     ,{<<"Enable-T38-Gateway">>, 'undefined'}
+    ];
+get_inbound_t38_settings('false') ->
+    [{<<"Enable-T38-Fax">>, 'undefined'}
+     ,{<<"Enable-T38-Fax-Request">>, 'undefined'}
+     ,{<<"Enable-T38-Passthrough">>, 'undefined'}
+     ,{<<"Enable-T38-Gateway">>, 'undefined'}
+    ].
+
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Get the t38 settings for an endpoint based on carrier and device
+%% @end
+%%--------------------------------------------------------------------
+-spec get_outbound_t38_settings(ne_binary(), api_binary()) -> wh_proplist().
+get_outbound_t38_settings(CarrierFlag, 'undefined') ->
+    get_outbound_t38_settings(CarrierFlag);
+get_outbound_t38_settings('true', <<"auto">>) ->
+    get_outbound_t38_settings(<<"true">>, <<"true">>);
+get_outbound_t38_settings('true', 'true') ->
+    [{<<"Enable-T38-Fax">>, 'undefined'}
+    ,{<<"Enable-T38-Fax-Request">>, 'undefined'}
+    ,{<<"Enable-T38-Passthrough">>, 'true'}
+    ,{<<"Enable-T38-Gateway">>, 'undefined'}
+    ];
+get_outbound_t38_settings('true', 'false') ->
+    [{<<"Enable-T38-Fax">>, 'true'}
+     ,{<<"Enable-T38-Fax-Request">>, 'true'}
+     ,{<<"Enable-T38-Passthrough">>, 'undefined'}
+     ,{<<"Enable-T38-Gateway">>, <<"self">>}
+    ];
+get_outbound_t38_settings('false', 'false') ->
+    [{<<"Enable-T38-Fax">>, 'undefined'}
+     ,{<<"Enable-T38-Fax-Request">>, 'undefined'}
+     ,{<<"Enable-T38-Passthrough">>, 'true'}
+     ,{<<"Enable-T38-Gateway">>, 'undefined'}
+    ];
+get_outbound_t38_settings('false','true') ->
+    [{<<"Enable-T38-Fax">>, 'true'}
+     ,{<<"Enable-T38-Fax-Request">>, 'true'}
+     ,{<<"Enable-T38-Passthrough">>, 'undefined'}
+     ,{<<"Enable-T38-Gateway">>, <<"peer">>}
+    ].
+
+-spec get_outbound_t38_settings(ne_binary()) -> wh_proplist().
+get_outbound_t38_settings('true') ->
+    [{<<"Enable-T38-Fax">>, 'true'}
+     ,{<<"Enable-T38-Fax-Request">>, 'true'}
+     ,{<<"Enable-T38-Passthrough">>, 'undefined'}
+     ,{<<"Enable-T38-Gateway">>, 'undefined'}
+    ];
+get_outbound_t38_settings('false') ->
+    [{<<"Enable-T38-Fax">>, 'undefined'}
+     ,{<<"Enable-T38-Fax-Request">>, 'undefined'}
+     ,{<<"Enable-T38-Passthrough">>, 'undefined'}
+     ,{<<"Enable-T38-Gateway">>, 'undefined'}
+    ].
 
 %%--------------------------------------------------------------------
 %% @private
