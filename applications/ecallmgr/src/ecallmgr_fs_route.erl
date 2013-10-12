@@ -1,5 +1,5 @@
 %%%-------------------------------------------------------------------
-%%% @copyright (C) 2011-2012, VoIP INC
+%%% @copyright (C) 2011-2013, 2600Hz INC
 %%% @doc
 %%% Receive route(dialplan) requests from FS, request routes and respond
 %%% @end
@@ -181,6 +181,7 @@ process_route_req(Node, FetchId, CallId, Props) ->
 
 search_for_route(Node, FetchId, CallId, Props) ->
     _ = spawn('ecallmgr_fs_authz', 'authorize', [Props, CallId, Node]),
+    Start = wh_util:current_tstamp(),
     ReqResp = wh_amqp_worker:call(?ECALLMGR_AMQP_POOL
                                   ,route_req(CallId, FetchId, Props, Node)
                                   ,fun wapi_route:publish_req/1
@@ -188,15 +189,16 @@ search_for_route(Node, FetchId, CallId, Props) ->
                                   ,2500
                                  ),
     case ReqResp of
-        {'error', _R} -> 
+        {'error', _R} ->
             lager:info("did not receive route response for request ~s: ~p", [FetchId, _R]);
         {'ok', JObj} ->
             'true' = wapi_route:resp_v(JObj),
-            maybe_wait_for_authz(JObj, Node, FetchId, CallId)
+            lager:info("recv resp after ~p ms", [wh_util:elapsed_ms(Start)]),
+            maybe_wait_for_authz(wh_json:get_value(<<"Start-Time">>, Start, JObj), Node, FetchId, CallId)
     end.
 
 maybe_wait_for_authz(JObj, Node, FetchId, CallId) ->
-    case wh_util:is_true(ecallmgr_config:get(<<"authz_enabled">>, 'false')) 
+    case wh_util:is_true(ecallmgr_config:get(<<"authz_enabled">>, 'false'))
         andalso wh_json:get_value(<<"Method">>, JObj) =/= <<"error">>
     of
         'true' -> wait_for_authz(JObj, Node, FetchId, CallId);
@@ -207,7 +209,7 @@ wait_for_authz(JObj, Node, FetchId, CallId) ->
     case wh_cache:wait_for_key_local(?ECALLMGR_UTIL_CACHE, ?AUTHZ_RESPONSE_KEY(CallId)) of
         {'ok', {'true', AuthzCCVs}} ->
             _ = wh_cache:erase_local(?ECALLMGR_UTIL_CACHE, ?AUTHZ_RESPONSE_KEY(CallId)),
-            CCVs = wh_json:get_value(<<"Custom-Channel-Vars">>, JObj, wh_json:new()),  
+            CCVs = wh_json:get_value(<<"Custom-Channel-Vars">>, JObj, wh_json:new()),
             J = wh_json:set_value(<<"Custom-Channel-Vars">>
                                   ,wh_json:merge_jobjs(CCVs, AuthzCCVs)
                                   ,JObj),
@@ -231,7 +233,10 @@ reply_forbidden(Node, FetchId) ->
 
 -spec reply_affirmative(atom(), ne_binary(), ne_binary(), wh_json:object()) -> 'ok'.
 reply_affirmative(Node, FetchId, CallId, JObj) ->
-    lager:info("received affirmative route response for request ~s", [FetchId]),
+    lager:info("received affirmative route response for request ~s after ~p ms"
+               ,[FetchId
+                 ,wh_util:elapsed_ms(wh_json:get_value(<<"Start-Time">>, JObj))
+                ]),
     {'ok', XML} = ecallmgr_fs_xml:route_resp_xml(JObj),
     lager:debug("sending XML to ~s: ~s", [Node, XML]),
     case freeswitch:fetch_reply(Node, FetchId, 'dialplan', iolist_to_binary(XML), 3000) of
@@ -254,21 +259,32 @@ start_call_handling(Node, FetchId, CallId, JObj) ->
     CCVs = wh_json:get_value(<<"Custom-Channel-Vars">>, JObj, wh_json:new()),
     _ = ecallmgr_call_sup:start_event_process(Node, CallId),
     _ = ecallmgr_call_sup:start_control_process(Node, CallId, FetchId, ServerQ, CCVs),
-    ecallmgr_util:set(Node, CallId, wh_json:to_proplist(CCVs)).   
+    ecallmgr_util:set(Node, CallId, wh_json:to_proplist(CCVs)).
 
 -spec route_req(ne_binary(), ne_binary(), wh_proplist(), atom()) -> wh_proplist().
 route_req(CallId, FetchId, Props, Node) ->
     CCVs = [{<<"Fetch-ID">>, FetchId}],
     [{<<"Msg-ID">>, FetchId}
-     ,{<<"Caller-ID-Name">>, props:get_value(<<"variable_effective_caller_id_name">>, Props,
-                                             props:get_value(<<"Caller-Caller-ID-Name">>, Props, <<"Unknown">>))}
-     ,{<<"Caller-ID-Number">>, props:get_value(<<"variable_effective_caller_id_number">>, Props,
-                                               props:get_value(<<"Caller-Caller-ID-Number">>, Props, <<"0000000000">>))}
+     ,{<<"Caller-ID-Name">>, props:get_first_defined([<<"variable_effective_caller_id_name">>
+                                                      ,<<"Caller-Caller-ID-Name">>
+                                                     ]
+                                                     ,Props
+                                                     ,<<"Unknown">>
+                                                    )}
+     ,{<<"Caller-ID-Number">>, props:get_first_defined([<<"variable_effective_caller_id_number">>
+                                                        ,<<"Caller-Caller-ID-Number">>
+                                                       ]
+                                                       ,Props
+                                                       ,<<"0000000000">>
+                                                      )}
      ,{<<"To">>, ecallmgr_util:get_sip_to(Props)}
      ,{<<"From">>, ecallmgr_util:get_sip_from(Props)}
      ,{<<"Request">>, ecallmgr_util:get_sip_request(Props)}
-     ,{<<"From-Network-Addr">>, props:get_value(<<"variable_sip_h_X-AUTH-IP">>, Props
-                                                ,props:get_value(<<"variable_sip_received_ip">>, Props))}
+     ,{<<"From-Network-Addr">>, props:get_first_defined([<<"variable_sip_h_X-AUTH-IP">>
+                                                         ,<<"variable_sip_received_ip">>
+                                                        ]
+                                                        ,Props
+                                                       )}
      ,{<<"Switch-Nodename">>, wh_util:to_binary(Node)}
      ,{<<"Switch-Hostname">>, props:get_value(<<"FreeSWITCH-Hostname">>, Props)}
      ,{<<"Call-ID">>, CallId}
